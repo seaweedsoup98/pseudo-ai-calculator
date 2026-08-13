@@ -1,7 +1,7 @@
 import json
 import re
 
-from core import decide, mac_2d, normalize, valid_matrix
+from core import EPSILON, decide, mac_2d, normalize, valid_matrix
 from performance import print_performance
 
 SIZES = (5, 13, 25)
@@ -35,11 +35,17 @@ def load_filters(data):
             if normalize(key)
         } if isinstance(raw, dict) else {}
 
-        if all(valid_matrix(normalized.get(label), n) for label in ("Cross", "X")):
+        if all(
+            valid_matrix(normalized.get(label), n)
+            for label in ("Cross", "X")
+        ):
             filters[n] = normalized
-            print(f"size_{n}: Cross, X 로드 완료")
+            print(f"✓ size_{n} 필터 로드 완료 (Cross, X)")
         else:
-            print(f"size_{n}: 로드 실패 (필터 누락 또는 크기/형식 오류)")
+            print(
+                f"✗ size_{n} 필터 로드 실패 "
+                "(필터 누락 또는 크기/형식 오류)"
+            )
 
     return filters
 
@@ -61,7 +67,7 @@ def validate_case(case_id, case, filters):
         return None, None, None, "해당 크기 필터 누락 또는 오류"
 
     if not valid_matrix(pattern, n):
-        return None, None, None, f"패턴 크기/형식 오류: {n}x{n} 필요"
+        return None, None, None, f"패턴 크기/형식 오류: {n}×{n} 필요"
 
     if expected is None:
         return None, None, None, "expected 라벨 오류"
@@ -70,7 +76,9 @@ def validate_case(case_id, case, filters):
 
 
 def analyze_case(case_id, case, filters):
-    pattern, expected, filter_, reason = validate_case(case_id, case, filters)
+    pattern, expected, filter_, reason = validate_case(
+        case_id, case, filters
+    )
 
     print(f"\n--- {case_id} ---")
 
@@ -83,11 +91,24 @@ def analyze_case(case_id, case, filters):
     result = decide(cross_score, x_score, "Cross", "X")
     passed = result == expected
 
-    print(f"Cross 점수: {cross_score}")
-    print(f"X 점수: {x_score}")
-    print(f"판정: {result} | expected: {expected} | {'PASS' if passed else 'FAIL'}")
+    if result == "UNDECIDED":
+        detail = " (동점 규칙)" if not passed else ""
+        reason = (
+            f"동점(UNDECIDED, |Cross-X| < {EPSILON}) "
+            "처리 규칙에 따라 FAIL"
+        )
+    else:
+        detail = ""
+        reason = None if passed else f"판정 {result}, expected {expected}"
 
-    return passed, None if passed else f"판정 {result}, expected {expected}"
+    print(f"Cross 점수: {cross_score!r}")
+    print(f"X 점수: {x_score!r}")
+    print(
+        f"판정: {result} | expected: {expected} | "
+        f"{'PASS' if passed else 'FAIL'}{detail}"
+    )
+
+    return passed, reason
 
 
 def run_json_mode():
@@ -112,7 +133,7 @@ def run_json_mode():
         if not passed:
             failures.append((case_id, reason))
 
-    print_performance((3, 5, 13, 25))
+    print_performance((3, 5, 13, 25), 3)
 
     print("\n[4] 결과 요약")
     print(f"총 테스트: {len(patterns)}개")
@@ -120,6 +141,7 @@ def run_json_mode():
     print(f"실패: {len(failures)}개")
 
     if failures:
-        print("실패 케이스:")
+        print("\n실패 케이스:")
+
         for case_id, reason in failures:
             print(f"- {case_id}: {reason}")

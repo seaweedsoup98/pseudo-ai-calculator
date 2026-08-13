@@ -7,7 +7,8 @@ def main():
 
     while True:
         choice = input(
-            "\n1. 사용자 입력 (3x3)\n"
+            "\n[모드 선택]\n"
+            "1. 사용자 입력 (3x3)\n"
             "2. data.json 분석\n"
             "선택: "
         ).strip()
